@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>동대문중학교 과학실 예약 및 준비물 요청</title>
+<style>
+  :root{
+    --cream:#FAF7F0;
+    --card:#FFFFFF;
+    --navy:#1F2A44;
+    --navy-soft:#4A5570;
+    --line:#E7E1D4;
+    --roomA:#2F8F7A;   /* teal */
+    --roomA-bg:#E3F3EE;
+    --roomB:#C97A2B;   /* amber */
+    --roomB-bg:#FBEEDD;
+    --roomC:#7A5FBF;   /* violet */
+    --roomC-bg:#EDE7FA;
+    --danger:#C1443A;
+    --danger-bg:#FBEAE8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:var(--cream); color:var(--navy); padding-bottom:60px;
+  }
+  header{
+    padding:22px 20px 14px; max-width:1100px; margin:0 auto;
+  }
+  header h1{ margin:0 0 4px; font-size:1.4rem; }
+  header p{ margin:0; color:var(--navy-soft); font-size:0.88rem; }
+
+  nav.tabs{
+    display:flex; gap:8px; max-width:1100px; margin:14px auto 0; padding:0 20px;
+    flex-wrap:wrap;
+  }
+  nav.tabs button{
+    border:1px solid var(--line); background:var(--card); color:var(--navy-soft);
+    padding:9px 16px; border-radius:10px; font-size:0.92rem; cursor:pointer;
+  }
+  nav.tabs button.active{ background:var(--navy); color:#fff; border-color:var(--navy); }
+  nav.tabs button.primary{ background:var(--roomA); color:#fff; border-color:var(--roomA); margin-left:auto; }
+
+  main{ max-width:1100px; margin:16px auto; padding:0 20px; }
+
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:16px; }
+
+  /* ---- list view ---- */
+  .filters{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .filters input[type=text], .filters select{
+    padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:0.9rem; background:#fff;
+  }
+  table.req-table{ width:100%; border-collapse:collapse; font-size:0.86rem; }
+  table.req-table th, table.req-table td{ text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.req-table th{ color:var(--navy-soft); font-weight:600; font-size:0.78rem; text-transform:uppercase; letter-spacing:.02em; }
+  table.req-table tr:hover{ background:#FBFAF6; }
+  .room-tag{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-weight:600; }
+  .room-tag.A{ background:var(--roomA-bg); color:var(--roomA); }
+  .room-tag.B{ background:var(--roomB-bg); color:var(--roomB); }
+  .room-tag.C{ background:var(--roomC-bg); color:var(--roomC); }
+  .slot-line{ display:block; font-size:0.8rem; color:var(--navy-soft); }
+  .row-actions button{ border:none; background:none; cursor:pointer; font-size:0.82rem; color:var(--navy-soft); padding:2px 6px; }
+  .row-actions button.del{ color:var(--danger); }
+  .empty-state{ text-align:center; color:var(--navy-soft); padding:40px 10px; }
+
+  /* ---- form view ---- */
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-grid .full{ grid-column:1 / -1; }
+  @media (max-width:640px){ .form-grid{ grid-template-columns:1fr; } }
+  label{ display:block; font-size:0.82rem; color:var(--navy-soft); margin-bottom:4px; font-weight:600; }
+  input[type=text], input[type=date], textarea, select{
+    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; font-size:0.92rem;
+    font-family:inherit; background:#fff; color:var(--navy);
+  }
+  textarea{ min-height:64px; resize:vertical; }
+  .field{ margin-bottom:0; }
+  .room-choice{ display:flex; gap:8px; }
+  .room-choice button{
+    flex:1; padding:9px 0; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; font-weight:600;
+  }
+  .room-choice button.sel.A{ background:var(--roomA); color:#fff; border-color:var(--roomA); }
+  .room-choice button.sel.B{ background:var(--roomB); color:#fff; border-color:var(--roomB); }
+  .room-choice button.sel.C{ background:var(--roomC); color:#fff; border-color:var(--roomC); }
+
+  .slot-chips{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+  .chip{ background:var(--roomA-bg); color:var(--roomA); border-radius:999px; padding:6px 10px; font-size:0.82rem; display:flex; align-items:center; gap:6px; }
+  .chip button{ border:none; background:none; cursor:pointer; color:inherit; font-weight:700; font-size:0.9rem; line-height:1; }
+  .pick-btn{ background:var(--navy); color:#fff; border:none; padding:9px 14px; border-radius:8px; cursor:pointer; font-size:0.88rem; }
+  .save-row{ display:flex; gap:10px; margin-top:18px; }
+  .save-row button{ padding:10px 20px; border-radius:8px; border:none; cursor:pointer; font-size:0.92rem; font-weight:600; }
+  .save-row .save{ background:var(--roomA); color:#fff; }
+  .save-row .cancel{ background:#fff; color:var(--navy-soft); border:1px solid var(--line) !important; }
+  .save-row .del{ background:var(--danger-bg); color:var(--danger); margin-left:auto; }
+
+  /* ---- timetable view ---- */
+  .tt-toolbar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .room-tabs{ display:flex; gap:6px; }
+  .room-tabs button{ padding:7px 14px; border-radius:999px; border:1px solid var(--line); background:#fff; cursor:pointer; font-weight:600; font-size:0.85rem; }
+  .room-tabs button.A.active{ background:var(--roomA); color:#fff; border-color:var(--roomA); }
+  .room-tabs button.B.active{ background:var(--roomB); color:#fff; border-color:var(--roomB); }
+  .room-tabs button.C.active{ background:var(--roomC); color:#fff; border-color:var(--roomC); }
+  .week-nav{ display:flex; align-items:center; gap:8px; margin-left:auto; }
+  .week-nav button{ border:1px solid var(--line); background:#fff; border-radius:8px; padding:6px 10px; cursor:pointer; }
+  .week-nav .range{ font-size:0.88rem; color:var(--navy-soft); min-width:150px; text-align:center; }
+
+  .picker-banner{ background:#FFF7E0; border:1px solid #F0DFA0; color:#7A5A00; padding:10px 14px; border-radius:10px; margin-bottom:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:0.86rem; }
+  .picker-banner button{ margin-left:auto; background:var(--navy); color:#fff; border:none; padding:7px 14px; border-radius:8px; cursor:pointer; }
+
+  table.tt-grid{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  table.tt-grid th, table.tt-grid td{ border:1px solid var(--line); text-align:center; padding:6px 4px; font-size:0.78rem; height:56px; vertical-align:middle; }
+  table.tt-grid th{ background:#fff; color:var(--navy-soft); font-weight:600; padding:8px 4px; }
+  table.tt-grid td.period-label{ background:#fff; color:var(--navy-soft); font-weight:600; width:46px; }
+  table.tt-grid td.disabled{ background:repeating-linear-gradient(45deg,#F2EFE6,#F2EFE6 6px,#EAE6D9 6px,#EAE6D9 12px); }
+  table.tt-grid td.empty{ background:#fff; cursor:pointer; color:#C9C2AE; }
+  table.tt-grid td.empty:hover{ background:#F3F6F2; }
+  table.tt-grid td.occupied{ cursor:pointer; font-weight:600; }
+  table.tt-grid td.occupied.A{ background:var(--roomA-bg); color:var(--roomA); }
+  table.tt-grid td.occupied.B{ background:var(--roomB-bg); color:var(--roomB); }
+  table.tt-grid td.occupied.C{ background:var(--roomC-bg); color:var(--roomC); }
+  table.tt-grid td.pending{ background:#DFF3E0; color:#2F7A3E; cursor:pointer; font-weight:600; }
+  table.tt-grid .cell-title{ display:block; font-size:0.7rem; font-weight:400; opacity:0.85; }
+  .tt-wrap{ overflow-x:auto; }
+
+  .overlay{ position:fixed; inset:0; background:rgba(20,20,30,0.55); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .overlay .box{ background:#fff; border-radius:14px; max-width:560px; width:100%; padding:26px; max-height:86vh; overflow:auto; }
+  .overlay .box h2{ margin-top:0; }
+  .overlay pre{ background:#F5F2E9; padding:10px; border-radius:8px; font-size:0.8rem; overflow:auto; }
+  .overlay ol{ padding-left:20px; font-size:0.9rem; line-height:1.6; }
+  .overlay .close-btn{ margin-top:10px; background:var(--navy); color:#fff; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔬 동대문중학교 과학실 예약 및 준비물 요청</h1>
+  <p>과학실 A · B · C 시간표를 보고, 실험 준비물 요청을 등록/수정하세요. 이 링크를 아는 누구나 입력할 수 있습니다.</p>
+</header>
+
+<nav class="tabs">
+  <button id="tabList" onclick="switchView('list')">📋 요청 목록</button>
+  <button id="tabTimetable" onclick="switchView('timetable')">🗓 시간표 보기</button>
+  <button class="primary" onclick="startNewRequest()">+ 새 요청 등록</button>
+</nav>
+
+<main id="main"></main>
+
+<div id="overlayRoot"></div>
+
+<!-- =================== Firebase =================== -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+/* =========================================================================
+   1) Firebase 설정 — 반드시 본인의 프로젝트 값으로 교체하세요.
+      Firebase 콘솔(console.firebase.google.com) > 프로젝트 설정 > 일반 >
+      "내 앱" 에서 웹 앱을 추가하면 아래와 같은 객체를 받을 수 있습니다.
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyBH7fyPLD_B1TtazAFA54tCcdsjb5hpvSM",
+  authDomain: "science-639c5.firebaseapp.com",
+  databaseURL: "https://science-639c5-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "science-639c5",
+  storageBucket: "science-639c5.firebasestorage.app",
+  messagingSenderId: "593540214142",
+  appId: "1:593540214142:web:9cce68b0ce5a0802b1972f",
+  measurementId: "G-7W80XNMMXP" // 이 앱에서는 안 쓰지만 있어도 무방
+};
+
+/* Realtime Database 보안 규칙 (콘솔 > Realtime Database > 규칙 탭에 붙여넣기)
+{
+  "rules": {
+    "requests": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
+누구나 링크로 들어와 자유롭게 입력/수정하는 구조이므로 위 규칙은 완전히 공개된 상태입니다.
+필요하면 나중에 인증(auth)을 추가해 더 제한할 수 있습니다.
+*/
+
+const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY"
+  && firebaseConfig.databaseURL
+  && firebaseConfig.databaseURL.startsWith("https://");
+let db = null;
+let requestsCache = {};
+
+if (isConfigured) {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+  db.ref('requests').on('value', (snap) => {
+    requestsCache = snap.val() || {};
+    render();
+  });
+} else {
+  showSetupOverlay();
+}
+
+/* =========================================================================
+   2) 상태
+   ========================================================================= */
+let currentView = 'list';       // 'list' | 'timetable' | 'form'
+let editingId = null;           // 수정 중인 요청 id (null = 신규)
+let draft = null;               // 폼에서 편집 중인 요청 데이터
+let formSlots = [];             // draft.slots 편집용 배열
+let pickerActive = false;       // 시간표에서 "폼에 슬롯 추가" 모드인지
+let ttRoom = 'A';
+let ttWeekStart = getMonday(new Date());
+
+const ROOMS = ['A', 'B', 'C'];
+const DAY_LABELS = ['월', '화', '수', '목', '금'];
+
+/* 요청자 이름마다 고정된 색을 부여 (시간표 칸 배경색으로 사용) */
+const REQUESTER_PALETTE = [
+  { bg: '#E3F3EE', fg: '#2F8F7A' },
+  { bg: '#FBEEDD', fg: '#C97A2B' },
+  { bg: '#EDE7FA', fg: '#7A5FBF' },
+  { bg: '#FDE7EE', fg: '#C23B6D' },
+  { bg: '#E6F0FB', fg: '#2A6FB0' },
+  { bg: '#EFF5DE', fg: '#5C8A1E' },
+  { bg: '#FCEFE0', fg: '#B5651D' },
+  { bg: '#EDEDF5', fg: '#4B4B78' },
+];
+function colorForName(name) {
+  if (!name) return { bg: '#F2EFE6', fg: 'var(--navy-soft)' };
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return REQUESTER_PALETTE[hash % REQUESTER_PALETTE.length];
+}
+
+/* =========================================================================
+   3) 날짜/시간표 유틸
+   ========================================================================= */
+function getMonday(d) {
+  const dt = new Date(d);
+  const day = dt.getDay(); // 0=일 .. 6=토
+  const diff = day === 0 ? -6 : 1 - day;
+  dt.setDate(dt.getDate() + diff);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+}
+function addDays(d, n) {
+  const dt = new Date(d);
+  dt.setDate(dt.getDate() + n);
+  return dt;
+}
+function toISO(d) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function displayMD(d) { return `${d.getMonth() + 1}/${d.getDate()}`; }
+function periodsForDate(d) {
+  const day = d.getDay(); // 화=2, 목=4 => 7교시, 그 외(월수금) => 6교시
+  return (day === 2 || day === 4) ? 7 : 6;
+}
+function weekDates(monday) {
+  return [0, 1, 2, 3, 4].map(i => addDays(monday, i));
+}
+function dayLabelForDate(d) {
+  return DAY_LABELS[d.getDay() - 1] ?? '';
+}
+function todayISO() { return toISO(new Date()); }
+
+/* =========================================================================
+   4) 렌더링 루트
+   ========================================================================= */
+function render() {
+  document.getElementById('tabList').classList.toggle('active', currentView === 'list');
+  document.getElementById('tabTimetable').classList.toggle('active', currentView === 'timetable');
+  const main = document.getElementById('main');
+  if (!isConfigured) { main.innerHTML = ''; return; }
+  if (currentView === 'list') main.innerHTML = renderList();
+  else if (currentView === 'timetable') main.innerHTML = renderTimetable();
+  else if (currentView === 'form') main.innerHTML = renderForm();
+}
+
+function switchView(view) {
+  pickerActive = false;
+  currentView = view;
+  render();
+}
+
+/* =========================================================================
+   5) 목록 뷰
+   ========================================================================= */
+let listFilters = { requester: '', grade: '', room: '' };
+
+function renderList() {
+  const rows = Object.entries(requestsCache)
+    .map(([id, r]) => ({ id, ...r }))
+    .sort((a, b) => (b.requestedDate || '').localeCompare(a.requestedDate || ''));
+
+  const filtered = rows.filter(r => {
+    if (listFilters.grade && String(r.grade) !== listFilters.grade) return false;
+    if (listFilters.room && r.room !== listFilters.room) return false;
+    if (listFilters.requester) {
+      const hay = (r.requester || '').toLowerCase();
+      if (!hay.includes(listFilters.requester.toLowerCase())) return false;
+    }
+    return true;
+  });
+
+  const bodyRows = filtered.map(r => {
+    const slotsHtml = (r.slots || []).map(s => {
+      const d = new Date(s.date + 'T00:00:00');
+      return `<span class="slot-line">${displayMD(d)}(${dayLabelForDate(d)}) ${s.period}교시${s.classLabel ? ` [${escapeHtml(s.classLabel)}]` : ''}</span>`;
+    }).join('') || '<span class="slot-line">-</span>';
+    const nl2br = (txt) => escapeHtml(txt || '-').replace(/\n/g, '<br>');
+
+    return `
+      <tr>
+        <td>${r.requestedDate || '-'}</td>
+        <td>${escapeHtml(r.requester || '-')}</td>
+        <td>${r.grade || '-'}</td>
+        <td>${escapeHtml(r.unit || '-')}</td>
+        <td>${escapeHtml(r.title || '-')}</td>
+        <td>${nl2br(r.materials)}</td>
+        <td>${nl2br(r.reagents)}</td>
+        <td>${escapeHtml(r.groups || '-')}</td>
+        <td>${r.room ? `<span class="room-tag ${r.room}">과학실 ${r.room}</span>` : '-'}</td>
+        <td>${slotsHtml}</td>
+        <td>${escapeHtml(r.notes || '-')}</td>
+        <td>${r.reference ? `<a href="${escapeAttr(r.reference)}" target="_blank" rel="noopener">링크</a>` : '-'}</td>
+        <td class="row-actions">
+          <button onclick="editRequest('${r.id}')">수정</button>
+          <button class="del" onclick="deleteRequest('${r.id}')">삭제</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <div class="filters">
+        <input type="text" placeholder="요청자 이름으로 검색 (Enter)" value="${escapeAttr(listFilters.requester)}"
+               onchange="listFilters.requester=this.value; render();"
+               onkeydown="if(event.key==='Enter'){listFilters.requester=this.value; render();}" />
+        <select onchange="listFilters.grade=this.value; render();">
+          <option value="">전체 학년</option>
+          <option value="1" ${listFilters.grade === '1' ? 'selected' : ''}>1학년</option>
+          <option value="2" ${listFilters.grade === '2' ? 'selected' : ''}>2학년</option>
+          <option value="3" ${listFilters.grade === '3' ? 'selected' : ''}>3학년</option>
+        </select>
+        <select onchange="listFilters.room=this.value; render();">
+          <option value="">전체 과학실</option>
+          <option value="A" ${listFilters.room === 'A' ? 'selected' : ''}>과학실 A</option>
+          <option value="B" ${listFilters.room === 'B' ? 'selected' : ''}>과학실 B</option>
+          <option value="C" ${listFilters.room === 'C' ? 'selected' : ''}>과학실 C</option>
+        </select>
+      </div>
+      <p style="font-size:0.8rem; color:var(--navy-soft); margin:0 0 10px;">아래 목록은 모든 선생님의 요청이 실시간으로 함께 보여요 — 실무사 선생님도 이 화면에서 전체 준비물을 한 번에 확인하실 수 있습니다.</p>
+      ${filtered.length ? `
+      <div style="overflow-x:auto;">
+        <table class="req-table">
+          <thead><tr>
+            <th>요청일자</th><th>요청자</th><th>학년</th><th>단원</th><th>제목/페이지</th>
+            <th>준비물</th><th>약품(시약)</th><th>모둠</th>
+            <th>과학실</th><th>실험일자·학년반</th><th>비고</th><th>참고</th><th></th>
+          </tr></thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      </div>` : `<div class="empty-state">등록된 요청이 없습니다. 위의 “+ 새 요청 등록”을 눌러 시작하세요.</div>`}
+    </div>`;
+}
+
+/* =========================================================================
+   6) 시간표 뷰
+   ========================================================================= */
+function renderTimetable() {
+  const dates = weekDates(ttWeekStart);
+  const occupied = {}; // key: iso_period -> {id, classLabel, title, requester, room}
+  Object.entries(requestsCache).forEach(([id, r]) => {
+    if (r.room !== ttRoom) return;
+    (r.slots || []).forEach(s => {
+      occupied[`${s.date}_${s.period}`] = { id, classLabel: s.classLabel, title: r.title, requester: r.requester };
+    });
+  });
+
+  const pendingSet = new Set(pickerActive ? formSlots.map(s => `${s.date}_${s.period}`) : []);
+
+  const headerCells = dates.map(d => `<th>${dayLabelForDate(d)}<br>${displayMD(d)}</th>`).join('');
+
+  let bodyRows = '';
+  for (let period = 1; period <= 7; period++) {
+    let cells = '';
+    dates.forEach(d => {
+      const maxP = periodsForDate(d);
+      const iso = toISO(d);
+      const key = `${iso}_${period}`;
+      if (period > maxP) {
+        cells += `<td class="disabled"></td>`;
+      } else if (pendingSet.has(key)) {
+        const s = formSlots.find(x => x.date === iso && x.period === period);
+        cells += `<td class="pending" title="클릭하면 제거됩니다" onclick="removePendingSlot('${iso}',${period})">✓ ${escapeHtml(s?.classLabel || '')}<span class="cell-title">${escapeHtml((draft && draft.requester) || '(요청자 미입력)')}</span></td>`;
+      } else if (occupied[key]) {
+        const o = occupied[key];
+        const c = colorForName(o.requester);
+        cells += `<td class="occupied" style="background:${c.bg};color:${c.fg};" onclick="showSlotDetail('${o.id}')">${escapeHtml(o.classLabel || '')}<span class="cell-title">${escapeHtml(o.requester || '')}</span></td>`;
+      } else {
+        cells += `<td class="empty" onclick="cellClicked('${iso}',${period})">${pickerActive ? '+' : ''}</td>`;
+      }
+    });
+    bodyRows += `<tr><td class="period-label">${period}</td>${cells}</tr>`;
+  }
+
+  return `
+    <div class="card">
+      ${pickerActive ? `
+      <div class="picker-banner">
+        📌 과학실 ${ttRoom} 시간표에서 실험 시간을 클릭해 선택하세요 (여러 칸 선택 가능, 이미 선택한 칸을 다시 누르면 제거됩니다).
+        <button onclick="finishPicking()">선택 완료 → 요청서로 돌아가기</button>
+      </div>` : ''}
+      <div class="tt-toolbar">
+        <div class="room-tabs">
+          ${ROOMS.map(r => `<button class="${r} ${ttRoom === r ? 'active' : ''}" onclick="setTtRoom('${r}')">과학실 ${r}</button>`).join('')}
+        </div>
+        <div class="week-nav">
+          <button onclick="shiftWeek(-1)">‹ 이전 주</button>
+          <span class="range">${displayMD(dates[0])} – ${displayMD(dates[4])}</span>
+          <button onclick="shiftWeek(1)">다음 주 ›</button>
+        </div>
+      </div>
+      <div class="tt-wrap">
+        <table class="tt-grid">
+          <thead><tr><th>교시</th>${headerCells}</tr></thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function setTtRoom(r) { ttRoom = r; render(); }
+function shiftWeek(n) { ttWeekStart = addDays(ttWeekStart, n * 7); render(); }
+
+function cellClicked(iso, period) {
+  if (pickerActive) {
+    const label = window.prompt('이 시간에 해당하는 학년/반을 입력하세요 (예: 2-3)', '');
+    if (label === null) return;
+    formSlots.push({ date: iso, period, classLabel: label.trim() });
+    render();
+  } else {
+    const label = window.prompt('빈 시간입니다. 이 시간으로 새 요청을 등록할까요? 학년/반을 입력하세요 (예: 2-3). 취소하려면 취소를 누르세요.', '');
+    if (label === null) return;
+    startNewRequest();
+    draft.room = ttRoom;
+    formSlots = [{ date: iso, period, classLabel: label.trim() }];
+    currentView = 'form';
+    render();
+  }
+}
+
+function removePendingSlot(iso, period) {
+  formSlots = formSlots.filter(s => !(s.date === iso && s.period === period));
+  render();
+}
+
+function showSlotDetail(id) {
+  const r = requestsCache[id];
+  if (!r) return;
+  const slotLines = (r.slots || []).map(s => {
+    const d = new Date(s.date + 'T00:00:00');
+    return `${displayMD(d)}(${dayLabelForDate(d)}) ${s.period}교시 [${s.classLabel || '-'}]`;
+  }).join('\n');
+  const overlay = document.getElementById('overlayRoot');
+  overlay.innerHTML = `
+    <div class="overlay" onclick="if(event.target===this) closeOverlay()">
+      <div class="box">
+        <h2>${escapeHtml(r.title || '(제목 없음)')}</h2>
+        <p><strong>요청자</strong> ${escapeHtml(r.requester || '-')} · <strong>학년</strong> ${r.grade || '-'} · <strong>단원</strong> ${escapeHtml(r.unit || '-')} · <span class="room-tag ${r.room}">과학실 ${r.room}</span></p>
+        <p><strong>준비물</strong><br>${escapeHtml(r.materials || '-').replace(/\n/g, '<br>')}</p>
+        <p><strong>약품(시약)</strong><br>${escapeHtml(r.reagents || '-').replace(/\n/g, '<br>')}</p>
+        <p><strong>모둠/인원</strong> ${escapeHtml(r.groups || '-')}</p>
+        <p><strong>비고</strong> ${escapeHtml(r.notes || '-')}</p>
+        ${r.reference ? `<p><strong>참고</strong> <a href="${escapeAttr(r.reference)}" target="_blank" rel="noopener">${escapeHtml(r.reference)}</a></p>` : ''}
+        <p><strong>실험일자·학년반</strong><br>${escapeHtml(slotLines || '-').replace(/\n/g, '<br>')}</p>
+        <div class="save-row" style="margin-top:16px;">
+          <button class="save" onclick="closeOverlay(); editRequest('${id}')">수정하기</button>
+          <button class="cancel" onclick="closeOverlay()">닫기</button>
+          <button class="del" onclick="closeOverlay(); deleteRequest('${id}')">삭제</button>
+        </div>
+      </div>
+    </div>`;
+}
+function closeOverlay() { document.getElementById('overlayRoot').innerHTML = ''; }
+
+function finishPicking() { pickerActive = false; currentView = 'form'; render(); }
+
+/* =========================================================================
+   7) 폼 뷰 (신규/수정)
+   ========================================================================= */
+function defaultDraft() {
+  return { requestedDate: todayISO(), requester: '', grade: '', unit: '', title: '', materials: '', reagents: '', groups: '', notes: '', reference: '', room: 'A' };
+}
+
+function startNewRequest() {
+  editingId = null;
+  draft = defaultDraft();
+  formSlots = [];
+  pickerActive = false;
+  currentView = 'form';
+  render();
+}
+
+function editRequest(id) {
+  const r = requestsCache[id];
+  if (!r) return;
+  editingId = id;
+  draft = { ...defaultDraft(), ...r };
+  formSlots = (r.slots || []).map(s => ({ ...s }));
+  pickerActive = false;
+  currentView = 'form';
+  render();
+}
+
+function deleteRequest(id) {
+  if (!window.confirm('이 요청을 삭제할까요? 되돌릴 수 없습니다.')) return;
+  db.ref('requests/' + id).remove();
+  if (editingId === id) startNewRequest();
+}
+
+function updateDraft(field, value) { draft[field] = value; }
+
+function renderForm() {
+  if (!draft) draft = defaultDraft();
+  const slotChips = formSlots
+    .slice()
+    .sort((a, b) => (a.date + a.period).localeCompare(b.date + b.period))
+    .map((s, i) => {
+      const d = new Date(s.date + 'T00:00:00');
+      return `<span class="chip">${displayMD(d)}(${dayLabelForDate(d)}) ${s.period}교시 ${s.classLabel ? `[${escapeHtml(s.classLabel)}]` : ''}
+        <button onclick="removeSlotByIndex(${i})">✕</button></span>`;
+    }).join('');
+
+  return `
+    <div class="card">
+      <h2 style="margin-top:0;">${editingId ? '요청 수정' : '새 요청 등록'}</h2>
+      <div class="form-grid">
+        <div class="field">
+          <label>요청일자</label>
+          <input type="date" value="${draft.requestedDate || ''}" onchange="updateDraft('requestedDate', this.value)" />
+        </div>
+        <div class="field">
+          <label>요청자</label>
+          <input type="text" placeholder="이름" value="${escapeAttr(draft.requester)}" onchange="updateDraft('requester', this.value)" />
+        </div>
+        <div class="field">
+          <label>학년</label>
+          <select onchange="updateDraft('grade', this.value)">
+            <option value="" ${!draft.grade ? 'selected' : ''}>선택 안함</option>
+            <option value="1" ${draft.grade == '1' ? 'selected' : ''}>1학년</option>
+            <option value="2" ${draft.grade == '2' ? 'selected' : ''}>2학년</option>
+            <option value="3" ${draft.grade == '3' ? 'selected' : ''}>3학년</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>단원</label>
+          <input type="text" value="${escapeAttr(draft.unit)}" onchange="updateDraft('unit', this.value)" />
+        </div>
+        <div class="field full">
+          <label>제목/페이지</label>
+          <input type="text" placeholder="예: 탄성력(P72)" value="${escapeAttr(draft.title)}" onchange="updateDraft('title', this.value)" />
+        </div>
+        <div class="field full">
+          <label>준비물</label>
+          <textarea onchange="updateDraft('materials', this.value)">${escapeHtml(draft.materials)}</textarea>
+        </div>
+        <div class="field full">
+          <label>약품(시약)</label>
+          <textarea onchange="updateDraft('reagents', this.value)">${escapeHtml(draft.reagents)}</textarea>
+        </div>
+        <div class="field">
+          <label>모둠/인원</label>
+          <input type="text" placeholder="예: 6모둠" value="${escapeAttr(draft.groups)}" onchange="updateDraft('groups', this.value)" />
+        </div>
+        <div class="field">
+          <label>참고 (링크)</label>
+          <input type="text" placeholder="https://..." value="${escapeAttr(draft.reference)}" onchange="updateDraft('reference', this.value)" />
+        </div>
+        <div class="field full">
+          <label>비고</label>
+          <textarea onchange="updateDraft('notes', this.value)">${escapeHtml(draft.notes)}</textarea>
+        </div>
+        <div class="field full">
+          <label>사용 과학실</label>
+          <div class="room-choice">
+            ${ROOMS.map(r => `<button type="button" class="${r} ${draft.room === r ? 'sel' : ''}" onclick="updateDraft('room','${r}'); render();">과학실 ${r}</button>`).join('')}
+          </div>
+        </div>
+        <div class="field full">
+          <label>실험일자 · 학년반 (시간표에서 선택)</label>
+          <div class="slot-chips">${slotChips || '<span style="color:var(--navy-soft); font-size:0.85rem;">아직 선택한 시간이 없습니다.</span>'}</div>
+          <button type="button" class="pick-btn" onclick="openPickerFromForm()">🗓 시간표에서 시간 선택</button>
+        </div>
+      </div>
+      <div class="save-row">
+        <button class="save" onclick="saveRequest()">저장</button>
+        <button class="cancel" onclick="switchView('list')">취소</button>
+        ${editingId ? `<button class="del" onclick="deleteRequest('${editingId}')">삭제</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function removeSlotByIndex(i) {
+  const sorted = formSlots.slice().sort((a, b) => (a.date + a.period).localeCompare(b.date + b.period));
+  const target = sorted[i];
+  formSlots = formSlots.filter(s => !(s.date === target.date && s.period === target.period));
+  render();
+}
+
+function openPickerFromForm() {
+  pickerActive = true;
+  ttRoom = draft.room || 'A';
+  currentView = 'timetable';
+  render();
+}
+
+function saveRequest() {
+  if (!draft.requester || !draft.requester.trim()) {
+    alert('요청자를 입력해 주세요.');
+    return;
+  }
+  const payload = {
+    ...draft,
+    slots: formSlots,
+    updatedAt: firebase.database.ServerValue.TIMESTAMP
+  };
+  if (editingId) {
+    db.ref('requests/' + editingId).update(payload);
+  } else {
+    payload.createdAt = firebase.database.ServerValue.TIMESTAMP;
+    db.ref('requests').push(payload);
+  }
+  editingId = null;
+  draft = null;
+  formSlots = [];
+  switchView('list');
+}
+
+/* =========================================================================
+   8) 유틸 / 설정 안내
+   ========================================================================= */
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function escapeAttr(str) { return escapeHtml(str); }
+
+function showSetupOverlay() {
+  const overlay = document.getElementById('overlayRoot');
+  overlay.innerHTML = `
+    <div class="overlay">
+      <div class="box">
+        <h2>⚙️ Firebase 설정이 필요합니다</h2>
+        <p>이 앱은 여러 선생님이 같은 화면을 실시간으로 함께 보고 입력할 수 있도록 Firebase Realtime Database를 사용합니다. 아래 순서대로 한 번만 설정하면 됩니다.</p>
+        <ol>
+          <li><a href="https://console.firebase.google.com" target="_blank" rel="noopener">Firebase 콘솔</a>에서 새 프로젝트를 만듭니다.</li>
+          <li>왼쪽 메뉴 [빌드 &gt; Realtime Database] 에서 데이터베이스를 만듭니다 (위치는 asia-southeast1 등 가까운 곳).</li>
+          <li>[규칙] 탭에서 아래 규칙을 붙여넣고 게시합니다.</li>
+          <li>[프로젝트 설정 &gt; 일반] 에서 "웹 앱 추가" 후 나오는 firebaseConfig 값을 복사합니다.</li>
+          <li>이 파일(index.html) 상단의 <code>firebaseConfig</code> 객체를 복사한 값으로 교체하고 GitHub Pages에 올립니다.</li>
+        </ol>
+        <pre>{
+  "rules": {
+    "requests": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}</pre>
+        <p style="font-size:0.82rem; color:var(--navy-soft);">이 규칙은 링크를 아는 누구나 읽고 쓸 수 있게 완전히 공개합니다. 요청하신 대로 자유로운 입력을 위한 설정입니다.</p>
+      </div>
+    </div>`;
+}
+
+render();
+</script>
+</body>
+</html>
