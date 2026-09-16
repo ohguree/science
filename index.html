@@ -55,6 +55,8 @@
   table.req-table th, table.req-table td{ text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
   table.req-table th{ color:var(--navy-soft); font-weight:600; font-size:0.78rem; text-transform:uppercase; letter-spacing:.02em; }
   table.req-table tr:hover{ background:#FBFAF6; }
+  table.req-table tr.clickable-row{ cursor:pointer; }
+  table.req-table tr.clickable-row td{ font-size:0.92rem; padding:12px 8px; }
   .room-tag{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-weight:600; }
   .room-tag.A{ background:var(--roomA-bg); color:var(--roomA); }
   .room-tag.B{ background:var(--roomB-bg); color:var(--roomB); }
@@ -128,6 +130,13 @@
   .overlay pre{ background:#F5F2E9; padding:10px; border-radius:8px; font-size:0.8rem; overflow:auto; }
   .overlay ol{ padding-left:20px; font-size:0.9rem; line-height:1.6; }
   .overlay .close-btn{ margin-top:10px; background:var(--navy); color:#fff; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; }
+
+  @media print{
+    header, nav.tabs, main{ display:none !important; }
+    .overlay{ position:static !important; background:none !important; padding:0 !important; display:block !important; }
+    .overlay .box{ max-width:none !important; max-height:none !important; overflow:visible !important; box-shadow:none !important; border:none !important; padding:0 !important; }
+    .no-print{ display:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -140,7 +149,7 @@
 <nav class="tabs">
   <button id="tabList" onclick="switchView('list')">📋 요청 목록</button>
   <button id="tabTimetable" onclick="switchView('timetable')">🗓 시간표 보기</button>
-  <button class="primary" onclick="startNewRequest()">+ 새 요청 등록</button>
+  <button id="newReqBtn" class="primary" onclick="startNewRequest()">+ 새 요청 등록</button>
 </nav>
 
 <main id="main"></main>
@@ -268,6 +277,7 @@ function todayISO() { return toISO(new Date()); }
 function render() {
   document.getElementById('tabList').classList.toggle('active', currentView === 'list');
   document.getElementById('tabTimetable').classList.toggle('active', currentView === 'timetable');
+  document.getElementById('newReqBtn').style.display = currentView === 'form' ? 'none' : '';
   const main = document.getElementById('main');
   if (!isConfigured) { main.innerHTML = ''; return; }
   if (currentView === 'list') main.innerHTML = renderList();
@@ -302,30 +312,11 @@ function renderList() {
   });
 
   const bodyRows = filtered.map(r => {
-    const slotsHtml = (r.slots || []).map(s => {
-      const d = new Date(s.date + 'T00:00:00');
-      return `<span class="slot-line">${displayMD(d)}(${dayLabelForDate(d)}) ${s.period}교시${s.classLabel ? ` [${escapeHtml(s.classLabel)}]` : ''}</span>`;
-    }).join('') || '<span class="slot-line">-</span>';
-    const nl2br = (txt) => escapeHtml(txt || '-').replace(/\n/g, '<br>');
-
     return `
-      <tr>
+      <tr class="clickable-row" onclick="showSlotDetail('${r.id}')">
         <td>${r.requestedDate || '-'}</td>
         <td>${escapeHtml(r.requester || '-')}</td>
-        <td>${r.grade || '-'}</td>
-        <td>${escapeHtml(r.unit || '-')}</td>
-        <td>${escapeHtml(r.title || '-')}</td>
-        <td>${nl2br(r.materials)}</td>
-        <td>${nl2br(r.reagents)}</td>
-        <td>${escapeHtml(r.groups || '-')}</td>
-        <td>${r.room ? `<span class="room-tag ${r.room}">과학실 ${r.room}</span>` : '-'}</td>
-        <td>${slotsHtml}</td>
-        <td>${escapeHtml(r.notes || '-')}</td>
-        <td>${r.reference ? `<a href="${escapeAttr(r.reference)}" target="_blank" rel="noopener">링크</a>` : '-'}</td>
-        <td class="row-actions">
-          <button onclick="editRequest('${r.id}')">수정</button>
-          <button class="del" onclick="deleteRequest('${r.id}')">삭제</button>
-        </td>
+        <td>${escapeHtml(r.title || '(제목 없음)')}${r.page ? ` <span style="color:var(--navy-soft);">(${escapeHtml(r.page)})</span>` : ''}</td>
       </tr>`;
   }).join('');
 
@@ -348,14 +339,12 @@ function renderList() {
           <option value="C" ${listFilters.room === 'C' ? 'selected' : ''}>과학실 C</option>
         </select>
       </div>
-      <p style="font-size:0.8rem; color:var(--navy-soft); margin:0 0 10px;">아래 목록은 모든 선생님의 요청이 실시간으로 함께 보여요 — 실무사 선생님도 이 화면에서 전체 준비물을 한 번에 확인하실 수 있습니다.</p>
+      <p style="font-size:0.8rem; color:var(--navy-soft); margin:0 0 10px;">아래 목록은 모든 선생님의 요청이 실시간으로 함께 보여요. 항목을 클릭하면 준비물 등 자세한 내용이 나옵니다.</p>
       ${filtered.length ? `
       <div style="overflow-x:auto;">
         <table class="req-table">
           <thead><tr>
-            <th>요청일자</th><th>요청자</th><th>학년</th><th>단원</th><th>제목/페이지</th>
-            <th>준비물</th><th>약품(시약)</th><th>모둠</th>
-            <th>과학실</th><th>실험일자·학년반</th><th>비고</th><th>참고</th><th></th>
+            <th>요청일자</th><th>요청자</th><th>실험 명칭</th>
           </tr></thead>
           <tbody>${bodyRows}</tbody>
         </table>
@@ -465,7 +454,7 @@ function showSlotDetail(id) {
   overlay.innerHTML = `
     <div class="overlay" onclick="if(event.target===this) closeOverlay()">
       <div class="box">
-        <h2>${escapeHtml(r.title || '(제목 없음)')}</h2>
+        <h2>${escapeHtml(r.title || '(제목 없음)')}${r.page ? ` <span style="font-weight:400;color:var(--navy-soft);font-size:0.9rem;">(${escapeHtml(r.page)})</span>` : ''}</h2>
         <p><strong>요청자</strong> ${escapeHtml(r.requester || '-')} · <strong>학년</strong> ${r.grade || '-'} · <strong>단원</strong> ${escapeHtml(r.unit || '-')} · <span class="room-tag ${r.room}">과학실 ${r.room}</span></p>
         <p><strong>준비물</strong><br>${escapeHtml(r.materials || '-').replace(/\n/g, '<br>')}</p>
         <p><strong>약품(시약)</strong><br>${escapeHtml(r.reagents || '-').replace(/\n/g, '<br>')}</p>
@@ -473,8 +462,9 @@ function showSlotDetail(id) {
         <p><strong>비고</strong> ${escapeHtml(r.notes || '-')}</p>
         ${r.reference ? `<p><strong>참고</strong> <a href="${escapeAttr(r.reference)}" target="_blank" rel="noopener">${escapeHtml(r.reference)}</a></p>` : ''}
         <p><strong>실험일자·학년반</strong><br>${escapeHtml(slotLines || '-').replace(/\n/g, '<br>')}</p>
-        <div class="save-row" style="margin-top:16px;">
+        <div class="save-row no-print" style="margin-top:16px;">
           <button class="save" onclick="closeOverlay(); editRequest('${id}')">수정하기</button>
+          <button class="cancel" onclick="window.print()">🖨 인쇄</button>
           <button class="cancel" onclick="closeOverlay()">닫기</button>
           <button class="del" onclick="closeOverlay(); deleteRequest('${id}')">삭제</button>
         </div>
@@ -489,7 +479,7 @@ function finishPicking() { pickerActive = false; currentView = 'form'; render();
    7) 폼 뷰 (신규/수정)
    ========================================================================= */
 function defaultDraft() {
-  return { requestedDate: todayISO(), requester: '', grade: '', unit: '', title: '', materials: '', reagents: '', groups: '', notes: '', reference: '', room: 'A' };
+  return { requestedDate: todayISO(), requester: '', grade: '', unit: '', title: '', page: '', materials: '', reagents: '', groups: '', notes: '', reference: '', room: 'A' };
 }
 
 function startNewRequest() {
@@ -552,13 +542,17 @@ function renderForm() {
             <option value="3" ${draft.grade == '3' ? 'selected' : ''}>3학년</option>
           </select>
         </div>
+        <div class="field full">
+          <label>실험 명칭</label>
+          <input type="text" placeholder="예: 광물의 특성 관찰하기" value="${escapeAttr(draft.title)}" onchange="updateDraft('title', this.value)" />
+        </div>
         <div class="field">
           <label>단원</label>
           <input type="text" value="${escapeAttr(draft.unit)}" onchange="updateDraft('unit', this.value)" />
         </div>
-        <div class="field full">
-          <label>제목/페이지</label>
-          <input type="text" placeholder="예: 탄성력(P72)" value="${escapeAttr(draft.title)}" onchange="updateDraft('title', this.value)" />
+        <div class="field">
+          <label>페이지</label>
+          <input type="text" placeholder="예: P72 또는 60~61" value="${escapeAttr(draft.page || '')}" onchange="updateDraft('page', this.value)" />
         </div>
         <div class="field full">
           <label>준비물</label>
