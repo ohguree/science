@@ -127,6 +127,12 @@
   .overlay{ position:fixed; inset:0; background:rgba(20,20,30,0.55); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
   .overlay .box{ background:#fff; border-radius:14px; max-width:560px; width:100%; padding:26px; max-height:86vh; overflow:auto; }
   .overlay .box h2{ margin-top:0; }
+  .overlay .detail-box{ max-width:680px; }
+  .detail-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:6px; }
+  .detail-grid .full{ grid-column:1 / -1; }
+  @media (max-width:560px){ .detail-grid{ grid-template-columns:1fr; } }
+  .detail-field label{ margin-bottom:4px; }
+  .detail-value{ padding:9px 10px; border:1px solid var(--line); border-radius:8px; background:#FAFAF8; font-size:0.92rem; min-height:20px; line-height:1.5; word-break:break-word; }
   .overlay pre{ background:#F5F2E9; padding:10px; border-radius:8px; font-size:0.8rem; overflow:auto; }
   .overlay ol{ padding-left:20px; font-size:0.9rem; line-height:1.6; }
   .overlay .close-btn{ margin-top:10px; background:var(--navy); color:#fff; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; }
@@ -450,19 +456,26 @@ function showSlotDetail(id) {
     const d = new Date(s.date + 'T00:00:00');
     return `${displayMD(d)}(${dayLabelForDate(d)}) ${s.period}교시 [${s.classLabel || '-'}]`;
   }).join('\n');
+  const val = (txt) => escapeHtml(txt || '-').replace(/\n/g, '<br>');
   const overlay = document.getElementById('overlayRoot');
   overlay.innerHTML = `
     <div class="overlay" onclick="if(event.target===this) closeOverlay()">
-      <div class="box">
+      <div class="box detail-box">
         <h2>${escapeHtml(r.title || '(제목 없음)')}${r.page ? ` <span style="font-weight:400;color:var(--navy-soft);font-size:0.9rem;">(${escapeHtml(r.page)})</span>` : ''}</h2>
-        <p><strong>요청자</strong> ${escapeHtml(r.requester || '-')} · <strong>학년</strong> ${r.grade || '-'} · <strong>단원</strong> ${escapeHtml(r.unit || '-')} · <span class="room-tag ${r.room}">과학실 ${r.room}</span></p>
-        <p><strong>준비물</strong><br>${escapeHtml(r.materials || '-').replace(/\n/g, '<br>')}</p>
-        <p><strong>약품(시약)</strong><br>${escapeHtml(r.reagents || '-').replace(/\n/g, '<br>')}</p>
-        <p><strong>모둠/인원</strong> ${escapeHtml(r.groups || '-')}</p>
-        <p><strong>비고</strong> ${escapeHtml(r.notes || '-')}</p>
-        ${r.reference ? `<p><strong>참고</strong> <a href="${escapeAttr(r.reference)}" target="_blank" rel="noopener">${escapeHtml(r.reference)}</a></p>` : ''}
-        <p><strong>실험일자·학년반</strong><br>${escapeHtml(slotLines || '-').replace(/\n/g, '<br>')}</p>
-        <div class="save-row no-print" style="margin-top:16px;">
+        <div class="detail-grid">
+          <div class="detail-field"><label>요청일자</label><div class="detail-value">${r.requestedDate || '-'}</div></div>
+          <div class="detail-field"><label>요청자</label><div class="detail-value">${escapeHtml(r.requester || '-')}</div></div>
+          <div class="detail-field"><label>학년</label><div class="detail-value">${r.grade ? r.grade + '학년' : '-'}</div></div>
+          <div class="detail-field"><label>단원</label><div class="detail-value">${escapeHtml(r.unit || '-')}</div></div>
+          <div class="detail-field full"><label>준비물</label><div class="detail-value">${val(r.materials)}</div></div>
+          <div class="detail-field full"><label>약품(시약)</label><div class="detail-value">${val(r.reagents)}</div></div>
+          <div class="detail-field"><label>모둠/인원</label><div class="detail-value">${escapeHtml(r.groups || '-')}</div></div>
+          <div class="detail-field"><label>사용 과학실</label><div class="detail-value"><span class="room-tag ${r.room}">과학실 ${r.room}</span></div></div>
+          <div class="detail-field full"><label>실험일자·학년반</label><div class="detail-value">${val(slotLines)}</div></div>
+          <div class="detail-field full"><label>비고</label><div class="detail-value">${val(r.notes)}</div></div>
+          ${r.reference ? `<div class="detail-field full"><label>참고</label><div class="detail-value"><a href="${escapeAttr(r.reference)}" target="_blank" rel="noopener">${escapeHtml(r.reference)}</a></div></div>` : ''}
+        </div>
+        <div class="save-row no-print">
           <button class="save" onclick="closeOverlay(); editRequest('${id}')">수정하기</button>
           <button class="cancel" onclick="window.print()">🖨 인쇄</button>
           <button class="cancel" onclick="closeOverlay()">닫기</button>
