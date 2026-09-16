@@ -283,7 +283,7 @@ function todayISO() { return toISO(new Date()); }
 function render() {
   document.getElementById('tabList').classList.toggle('active', currentView === 'list');
   document.getElementById('tabTimetable').classList.toggle('active', currentView === 'timetable');
-  document.getElementById('newReqBtn').style.display = currentView === 'form' ? 'none' : '';
+  document.getElementById('newReqBtn').style.display = (currentView === 'form' || pickerActive) ? 'none' : '';
   const main = document.getElementById('main');
   if (!isConfigured) { main.innerHTML = ''; return; }
   if (currentView === 'list') main.innerHTML = renderList();
@@ -434,8 +434,9 @@ function cellClicked(iso, period) {
     formSlots.push({ date: iso, period, classLabel: label.trim() });
     render();
   } else {
+    document.getElementById('newReqBtn').style.display = 'none'; // 팝업이 뜨는 순간부터 바로 숨김
     const label = window.prompt('빈 시간입니다. 이 시간으로 새 요청을 등록할까요? 학년/반을 입력하세요 (예: 2-3). 취소하려면 취소를 누르세요.', '');
-    if (label === null) return;
+    if (label === null) { document.getElementById('newReqBtn').style.display = ''; return; }
     startNewRequest();
     draft.room = ttRoom;
     formSlots = [{ date: iso, period, classLabel: label.trim() }];
