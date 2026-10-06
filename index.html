@@ -113,7 +113,8 @@
   table.tt-grid th, table.tt-grid td{ border:1px solid var(--line); text-align:center; padding:6px 4px; font-size:0.78rem; height:56px; vertical-align:middle; }
   table.tt-grid th{ background:#fff; color:var(--navy-soft); font-weight:600; padding:8px 4px; }
   table.tt-grid td.period-label{ background:#fff; color:var(--navy-soft); font-weight:600; width:46px; }
-  table.tt-grid td.disabled{ background:repeating-linear-gradient(45deg,#F2EFE6,#F2EFE6 6px,#EAE6D9 6px,#EAE6D9 12px); }
+  table.tt-grid tr.extra-row td.period-label{ font-size:0.72rem; }
+  table.tt-grid tr.extra-row td{ border-top:2px solid var(--line); }
   table.tt-grid td.empty{ background:#fff; cursor:pointer; color:#C9C2AE; }
   table.tt-grid td.empty:hover{ background:#F3F6F2; }
   table.tt-grid td.occupied{ cursor:pointer; font-weight:600; }
@@ -224,7 +225,10 @@ let ttRoom = 'A';
 let ttWeekStart = getMonday(new Date());
 
 const ROOMS = ['A', 'B', 'C'];
-const DAY_LABELS = ['월', '화', '수', '목', '금'];
+const DAY_LABELS = ['월', '화', '수', '목', '금', '토'];
+const REGULAR_PERIODS = 7;      // 월~토 모두 1~7교시
+const EXTRA_PERIOD = 8;         // "방과후" 칸 (내부적으로는 8교시로 저장)
+const EXTRA_PERIOD_LABEL = '방과후';
 
 /* 요청자 이름마다 고정된 색을 부여 (시간표 칸 배경색으로 사용) */
 const REQUESTER_PALETTE = [
@@ -265,12 +269,11 @@ function toISO(d) {
   return `${y}-${m}-${day}`;
 }
 function displayMD(d) { return `${d.getMonth() + 1}/${d.getDate()}`; }
-function periodsForDate(d) {
-  const day = d.getDay(); // 화=2, 목=4 => 7교시, 그 외(월수금) => 6교시
-  return (day === 2 || day === 4) ? 7 : 6;
-}
 function weekDates(monday) {
-  return [0, 1, 2, 3, 4].map(i => addDays(monday, i));
+  return [0, 1, 2, 3, 4, 5].map(i => addDays(monday, i)); // 월~토
+}
+function periodLabel(period) {
+  return period === EXTRA_PERIOD ? EXTRA_PERIOD_LABEL : String(period);
 }
 function dayLabelForDate(d) {
   return DAY_LABELS[d.getDay() - 1] ?? '';
@@ -376,15 +379,12 @@ function renderTimetable() {
   const headerCells = dates.map(d => `<th>${dayLabelForDate(d)}<br>${displayMD(d)}</th>`).join('');
 
   let bodyRows = '';
-  for (let period = 1; period <= 7; period++) {
+  for (let period = 1; period <= EXTRA_PERIOD; period++) {
     let cells = '';
     dates.forEach(d => {
-      const maxP = periodsForDate(d);
       const iso = toISO(d);
       const key = `${iso}_${period}`;
-      if (period > maxP) {
-        cells += `<td class="disabled"></td>`;
-      } else if (pendingSet.has(key)) {
+      if (pendingSet.has(key)) {
         const s = formSlots.find(x => x.date === iso && x.period === period);
         cells += `<td class="pending" title="클릭하면 제거됩니다" onclick="removePendingSlot('${iso}',${period})">✓ ${escapeHtml(s?.classLabel || '')}<span class="cell-title">${escapeHtml((draft && draft.requester) || '(요청자 미입력)')}</span></td>`;
       } else if (occupied[key]) {
@@ -395,7 +395,8 @@ function renderTimetable() {
         cells += `<td class="empty" onclick="cellClicked('${iso}',${period})">${pickerActive ? '+' : ''}</td>`;
       }
     });
-    bodyRows += `<tr><td class="period-label">${period}</td>${cells}</tr>`;
+    const rowClass = period === EXTRA_PERIOD ? ' class="extra-row"' : '';
+    bodyRows += `<tr${rowClass}><td class="period-label">${periodLabel(period)}</td>${cells}</tr>`;
   }
 
   return `
@@ -411,7 +412,7 @@ function renderTimetable() {
         </div>
         <div class="week-nav">
           <button onclick="shiftWeek(-1)">‹ 이전 주</button>
-          <span class="range">${displayMD(dates[0])} – ${displayMD(dates[4])}</span>
+          <span class="range">${displayMD(dates[0])} – ${displayMD(dates[5])}</span>
           <button onclick="shiftWeek(1)">다음 주 ›</button>
         </div>
       </div>
